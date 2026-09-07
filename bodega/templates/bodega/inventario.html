@@ -1,0 +1,90 @@
+{% extends 'bodega/base.html' %}
+
+{% block title %}Control de Inventario - Music Pro{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-3 border-start border-primary border-4">
+            <div class="text-muted small text-uppercase fw-bold">Variedad de Productos</div>
+            <div class="h3 mb-0 fw-bold">{{ total_items }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-3 border-start border-success border-4">
+            <div class="text-muted small text-uppercase fw-bold">Stock Físico Total</div>
+            <div class="h3 mb-0 fw-bold">{{ total_unidades }} u.</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-3 border-start border-danger border-4">
+            <div class="text-muted small text-uppercase fw-bold">Alertas de Quiebre</div>
+            <div class="h3 mb-0 fw-bold text-danger">{{ total_criticos }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" action="{% url 'bodega:panel' %}" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <input type="text" name="q" value="{{ busqueda }}" class="form-control" placeholder="Buscar por código SKU o modelo...">
+            </div>
+            <div class="col-md-4">
+                <select name="categoria" class="form-select">
+                    <option value="">Todas las Categorías</option>
+                    <option value="Cuerdas" {% if categoria_filtro == 'Cuerdas' %}selected{% endif %}>Cuerdas</option>
+                    <option value="Amplificación" {% if categoria_filtro == 'Amplificación' %}selected{% endif %}>Amplificación</option>
+                    <option value="Audio Pro" {% if categoria_filtro == 'Audio Pro' %}selected{% endif %}>Audio Pro</option>
+                    <option value="Percusión" {% if categoria_filtro == 'Percusión' %}selected{% endif %}>Percusión</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+                <a href="{% url 'bodega:panel' %}" class="btn btn-outline-secondary">Limpiar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>SKU / Código</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Ubicación</th>
+                    <th>Stock</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in productos %}
+                <tr>
+                    <td class="fw-bold font-monospace">{{ item.codigo }}</td>
+                    <td>{{ item.nombre }}</td>
+                    <td><span class="badge bg-secondary">{{ item.categoria }}</span></td>
+                    <td class="small text-muted">{{ item.ubicación }}</td>
+                    <td class="fw-bold">{{ item.stock_actual }}</td>
+                    <td>
+                        {% if item.stock_actual <= item.stock_minimo %}
+                            <span class="badge bg-danger">Crítico (&le; {{ item.stock_minimo }})</span>
+                        {% else %}
+                            <span class="badge bg-success">Óptimo</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        No se encontraron registros que coincidan con la búsqueda.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

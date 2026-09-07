@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1,
+    "codigo": "GTR-FEN-001",
+    "nombre": "Fender Stratocaster American Professional II",
+    "categoria": "Cuerdas",
+    "stock_actual": 13,
+    "stock_minimo": 5,
+    "ubicación": "Pasillo A - Estante 3 - Nivel 2",
+    "precio_unitario": 1650000,
+    "estado": "Disponible"
+  },
+  {
+    "id": 2,
+    "codigo": "AMP-MAR-002",
+    "nombre": "Marshall JCM800 2203 Vintage",
+    "categoria": "Amplificación",
+    "stock_actual": 3,
+    "stock_minimo": 4,
+    "ubicación": "Pasillo B - Estante 1 - Nivel 1",
+    "precio_unitario": 2100000,
+    "estado": "Crítico"
+  },
+  {
+    "id": 3,
+    "codigo": "MIC-SHU-003",
+    "nombre": "Shure SM7B Micrófono Dinámico",
+    "categoria": "Audio Pro",
+    "stock_actual": 22,
+    "stock_minimo": 8,
+    "ubicación": "Pasillo C - Estante 2 - Nivel 3",
+    "precio_unitario": 389000,
+    "estado": "Disponible"
+  },
+  {
+    "id": 4,
+    "codigo": "BAT-ROL-004",
+    "nombre": "Roland TD-27KV2 Batería Electrónica",
+    "categoria": "Percusión",
+    "stock_actual": 2,
+    "stock_minimo": 3,
+    "ubicación": "Pasillo A - Estante 5 - Nivel 1",
+    "precio_unitario": 2890000,
+    "estado": "Crítico"
+  }
+]

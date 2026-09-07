@@ -1,0 +1,69 @@
+{% extends 'bodega/base.html' %}
+
+{% block title %}Registrar Movimiento - Music Pro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-arrow-left-right me-2"></i>Gestión de Flujo de Mercadería</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{% url 'bodega:movimiento' %}">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Seleccionar Producto</label>
+                        <select name="producto_id" class="form-select" required>
+                            <option value="" disabled selected>Seleccione un artículo...</option>
+                            {% for p in productos %}
+                                <option value="{{ p.id }}">
+                                    [{{ p.codigo }}] {{ p.nombre }} (Stock: {{ p.stock_actual }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Tipo de Operación</label>
+                            <select name="tipo_movimiento" id="tipoMovimiento" class="form-select" required onchange="toggleDestino()">
+                                <option value="SALIDA">Salida hacia Sucursal / Franquicia</option>
+                                <option value="ENTRADA">Entrada / Recepción de Proveedor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Cantidad de Unidades</label>
+                            <input type="number" name="cantidad" min="1" class="form-control" placeholder="Ej: 5" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4" id="contenedorDestino">
+                        <label class="form-label fw-bold">Sucursal de Destino</label>
+                        <select name="destino" class="form-select">
+                            {% for sucursal in sucursales %}
+                                <option value="{{ sucursal }}">{{ sucursal }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Aplica únicamente para despachos desde la Bodega Principal.</div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'bodega:panel' %}" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary px-4">Procesar Movimiento</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleDestino() {
+    const tipo = document.getElementById('tipoMovimiento').value;
+    const destinoDiv = document.getElementById('contenedorDestino');
+    destinoDiv.style.display = (tipo === 'ENTRADA') ? 'none' : 'block';
+}
+</script>
+{% endblock %}
