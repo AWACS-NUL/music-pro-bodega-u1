@@ -78,3 +78,16 @@ class Producto(models.Model):
 
     def __str__(self):
         return f"[{self.codigo}] {self.nombre}"
+    
+class SucursalDestino(models.Model):
+    codigo_sucursal = models.CharField(max_length=20, unique=True, verbose_name="Código Sucursal")
+    nombre = models.CharField(max_length=120, verbose_name="Nombre de Sucursal")
+    direccion = models.CharField(max_length=200, verbose_name="Dirección")
+    ciudad = models.CharField(max_length=80, default="Santiago", verbose_name="Ciudad")
+
+    class Meta:
+        verbose_name = "Sucursal de Destino"
+        verbose_name_plural = "Sucursales de Destino"
+
+    def __str__(self):
+        return self.nombre
