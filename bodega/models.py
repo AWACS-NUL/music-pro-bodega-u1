@@ -60,3 +60,21 @@ class UbicacionFisica(models.Model):
 
     def __str__(self):
         return f"{self.zona.codigo_zona} [P:{self.pasillo}-E:{self.estante}-N:{self.nivel}]"
+    
+class Producto(models.Model):
+    codigo = models.CharField(max_length=50, unique=True, verbose_name="Código SKU")
+    nombre = models.CharField(max_length=200, verbose_name="Nombre Comercial")
+    categoria = models.ForeignKey(Categoria, on_delete=models.PROTECT, related_name="productos")
+    marca = models.ForeignKey(Marca, on_delete=models.PROTECT, related_name="productos")
+    proveedor_principal = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True, related_name="productos")
+    ubicacion = models.ForeignKey(UbicacionFisica, on_delete=models.SET_NULL, null=True, blank=True, related_name="productos")
+    stock_actual = models.PositiveIntegerField(default=0, verbose_name="Stock Actual")
+    stock_minimo = models.PositiveIntegerField(default=3, verbose_name="Stock Mínimo")
+    precio_unitario = models.PositiveIntegerField(verbose_name="Precio Unitario (CLP)")
+
+    class Meta:
+        verbose_name = "Producto"
+        verbose_name_plural = "Productos"
+
+    def __str__(self):
+        return f"[{self.codigo}] {self.nombre}"
