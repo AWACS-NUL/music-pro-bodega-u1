@@ -34,3 +34,15 @@ class Proveedor(models.Model):
 
     def __str__(self):
         return self.razon_social
+    
+class ZonaBodega(models.Model):
+    codigo_zona = models.CharField(max_length=10, unique=True, verbose_name="Código de Zona")
+    nombre = models.CharField(max_length=80, verbose_name="Nombre de Zona")
+    temperatura_controlada = models.BooleanField(default=False, verbose_name="Requiere Climatización")
+
+    class Meta:
+        verbose_name = "Zona de Bodega"
+        verbose_name_plural = "Zonas de Bodega"
+
+    def __str__(self):
+        return f"{self.codigo_zona} - {self.nombre}"
