@@ -46,3 +46,17 @@ class ZonaBodega(models.Model):
 
     def __str__(self):
         return f"{self.codigo_zona} - {self.nombre}"
+    
+class UbicacionFisica(models.Model):
+    zona = models.ForeignKey(ZonaBodega, on_delete=models.CASCADE, related_name="ubicaciones")
+    pasillo = models.CharField(max_length=10, verbose_name="Pasillo")
+    estante = models.CharField(max_length=10, verbose_name="Estante")
+    nivel = models.CharField(max_length=10, verbose_name="Nivel")
+
+    class Meta:
+        verbose_name = "Ubicación Física"
+        verbose_name_plural = "Ubicaciones Físicas"
+        unique_together = ('zona', 'pasillo', 'estante', 'nivel')
+
+    def __str__(self):
+        return f"{self.zona.codigo_zona} [P:{self.pasillo}-E:{self.estante}-N:{self.nivel}]"
