@@ -91,3 +91,23 @@ class SucursalDestino(models.Model):
 
     def __str__(self):
         return self.nombre
+    
+class OrdenDespacho(models.Model):
+    ESTADOS = [
+        ('PENDIENTE', 'En Preparación'),
+        ('DESPACHADO', 'En Tránsito hacia Tienda'),
+        ('ENTREGADO', 'Recibido en Destino'),
+        ('CANCELADO', 'Anulado'),
+    ]
+
+    numero_guia = models.CharField(max_length=30, unique=True, verbose_name="Número de Guía")
+    sucursal_destino = models.ForeignKey(SucursalDestino, on_delete=models.PROTECT, related_name="despachos")
+    estado = models.CharField(max_length=15, choices=ESTADOS, default='PENDIENTE', verbose_name="Estado")
+    fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha Creación")
+
+    class Meta:
+        verbose_name = "Orden de Despacho"
+        verbose_name_plural = "Órdenes de Despacho"
+
+    def __str__(self):
+        return f"Guía {self.numero_guia} -> {self.sucursal_destino.nombre}"
