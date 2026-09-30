@@ -21,3 +21,16 @@ class Marca(models.Model):
 
     def __str__(self):
         return self.nombre
+    
+class Proveedor(models.Model):
+    rut = models.CharField(max_length=20, unique=True, verbose_name="RUT / ID Tributario")
+    razon_social = models.CharField(max_length=150, verbose_name="Razón Social")
+    contacto_email = models.EmailField(verbose_name="Correo de Contacto")
+    telefono = models.CharField(max_length=30, blank=True, null=True, verbose_name="Teléfono")
+
+    class Meta:
+        verbose_name = "Proveedor"
+        verbose_name_plural = "Proveedores"
+
+    def __str__(self):
+        return self.razon_social
