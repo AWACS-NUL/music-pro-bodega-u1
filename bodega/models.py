@@ -111,3 +111,15 @@ class OrdenDespacho(models.Model):
 
     def __str__(self):
         return f"Guía {self.numero_guia} -> {self.sucursal_destino.nombre}"
+    
+class DetalleDespacho(models.Model):
+    orden = models.ForeignKey(OrdenDespacho, on_delete=models.CASCADE, related_name="detalles")
+    producto = models.ForeignKey(Producto, on_delete=models.PROTECT, related_name="despachos_lineas")
+    cantidad_solicitada = models.PositiveIntegerField(verbose_name="Cantidad Despachada")
+
+    class Meta:
+        verbose_name = "Detalle de Despacho"
+        verbose_name_plural = "Detalles de Despacho"
+
+    def __str__(self):
+        return f"{self.orden.numero_guia}: {self.producto.codigo} ({self.cantidad_solicitada} u.)"
