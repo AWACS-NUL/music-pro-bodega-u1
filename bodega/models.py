@@ -123,3 +123,23 @@ class DetalleDespacho(models.Model):
 
     def __str__(self):
         return f"{self.orden.numero_guia}: {self.producto.codigo} ({self.cantidad_solicitada} u.)"
+    
+class AuditoriaStock(models.Model):
+    TIPO_AJUSTE = [
+        ('INVENTARIO_FISICO', 'Ajuste por Recuento Manual'),
+        ('MERMA', 'Pérdida o Daño de Instrumento'),
+        ('DEVOLUCION', 'Devolución de Garantía'),
+    ]
+
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name="auditorias")
+    tipo_ajuste = models.CharField(max_length=20, choices=TIPO_AJUSTE, verbose_name="Tipo Ajuste")
+    cantidad_afectada = models.IntegerField(verbose_name="Diferencia (+/-)")
+    observacion = models.TextField(blank=True, null=True, verbose_name="Observaciones de Auditoría")
+    fecha_auditoria = models.DateTimeField(auto_now_add=True, verbose_name="Fecha")
+
+    class Meta:
+        verbose_name = "Auditoría de Stock"
+        verbose_name_plural = "Auditorías de Stock"
+
+    def __str__(self):
+        return f"Auditoría {self.producto.codigo} - {self.tipo_ajuste}"
