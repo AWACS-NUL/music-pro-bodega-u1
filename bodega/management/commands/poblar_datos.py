@@ -1,18 +1,32 @@
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from faker import Faker
 from bodega.models import (
     Categoria, Marca, Proveedor, ZonaBodega, UbicacionFisica,
     Producto, SucursalDestino, OrdenDespacho, DetalleDespacho, AuditoriaStock
 )
 import random
+import time
 
 fake = Faker('es_ES')
 
 class Command(BaseCommand):
     help = 'Poblar la base de datos con datos coherentes para instrumentos musicales y audio profesional'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--cantidad',
+            '-c',
+            type=int,
+            default=100,
+            help='Número de productos a generar (por defecto: 100)'
+        )
+
     def handle(self, *args, **kwargs):
-        self.stdout.write('Iniciando poblar_datos...')
+        cantidad = kwargs['cantidad']
+        tiempo_inicio = time.time()
+        
+        self.stdout.write(f'Iniciando poblar_datos con {cantidad} productos...')
 
         # Categorías (5+)
         categorias_data = [
@@ -114,54 +128,39 @@ class Command(BaseCommand):
         ubicaciones = list(UbicacionFisica.objects.all())
         self.stdout.write(f'Ubicaciones físicas creadas: {ubicaciones_count}')
 
-        # Productos (20+)
-        productos_data = [
-            {'codigo': 'SKU-GTR-001', 'nombre': 'Stratocaster Standard', 'categoria': 'Guitarras Eléctricas', 'marca': 'Fender', 'precio': 450000, 'stock': 15},
-            {'codigo': 'SKU-GTR-002', 'nombre': 'Les Paul Classic', 'categoria': 'Guitarras Eléctricas', 'marca': 'Gibson', 'precio': 650000, 'stock': 8},
-            {'codigo': 'SKU-GTR-003', 'nombre': 'Telecaster Player', 'categoria': 'Guitarras Eléctricas', 'marca': 'Fender', 'precio': 380000, 'stock': 12},
-            {'codigo': 'SKU-GTR-004', 'nombre': 'RG550 Genesis', 'categoria': 'Guitarras Eléctricas', 'marca': 'Ibanez', 'precio': 320000, 'stock': 10},
-            {'codigo': 'SKU-BAS-001', 'nombre': 'Jazz Bass Active', 'categoria': 'Bajos', 'marca': 'Fender', 'precio': 420000, 'stock': 9},
-            {'codigo': 'SKU-BAS-002', 'nombre': 'BB 435', 'categoria': 'Bajos', 'marca': 'Yamaha', 'precio': 280000, 'stock': 14},
-            {'codigo': 'SKU-KEY-001', 'nombre': 'Montage 8', 'categoria': 'Teclados y Pianos', 'marca': 'Yamaha', 'precio': 950000, 'stock': 5},
-            {'codigo': 'SKU-KEY-002', 'nombre': 'Juno-DS88', 'categoria': 'Teclados y Pianos', 'marca': 'Roland', 'precio': 520000, 'stock': 7},
-            {'codigo': 'SKU-KEY-003', 'nombre': 'P-125', 'categoria': 'Teclados y Pianos', 'marca': 'Yamaha', 'precio': 380000, 'stock': 11},
-            {'codigo': 'SKU-DRM-001', 'nombre': 'Export Double', 'categoria': 'Baterías y Percusión', 'marca': 'Pearl', 'precio': 680000, 'stock': 6},
-            {'codigo': 'SKU-DRM-002', 'nombre': 'TD-27KV', 'categoria': 'Baterías y Percusión', 'marca': 'Roland', 'precio': 890000, 'stock': 4},
-            {'codigo': 'SKU-AUD-001', 'nombre': 'SM58', 'categoria': 'Audio Profesional', 'marca': 'Shure', 'precio': 85000, 'stock': 45},
-            {'codigo': 'SKU-AUD-002', 'nombre': 'SM7B', 'categoria': 'Audio Profesional', 'marca': 'Shure', 'precio': 280000, 'stock': 12},
-            {'codigo': 'SKU-AUD-003', 'nombre': 'GO:MIXER', 'categoria': 'Audio Profesional', 'marca': 'Roland', 'precio': 65000, 'stock': 30},
-            {'codigo': 'SKU-AUD-004', 'nombre': 'Micro Cube GX', 'categoria': 'Audio Profesional', 'marca': 'Roland', 'precio': 95000, 'stock': 18},
-            {'codigo': 'SKU-AUD-005', 'nombre': 'V-02HD', 'categoria': 'Audio Profesional', 'marca': 'Roland', 'precio': 320000, 'stock': 8},
-            {'codigo': 'SKU-AUD-006', 'nombre': 'BR-800', 'categoria': 'Audio Profesional', 'marca': 'Roland', 'precio': 245000, 'stock': 15},
-            {'codigo': 'SKU-STR-001', 'nombre': 'Violín Student 4/4', 'categoria': 'Cuerdas Frotadas', 'marca': 'Yamaha', 'precio': 180000, 'stock': 20},
-            {'codigo': 'SKU-STR-002', 'nombre': 'Cello Standard', 'categoria': 'Cuerdas Frotadas', 'marca': 'Yamaha', 'precio': 420000, 'stock': 7},
-            {'codigo': 'SKU-WIN-001', 'nombre': 'YAS-280', 'categoria': 'Vientos', 'marca': 'Yamaha', 'precio': 380000, 'stock': 9},
-            {'codigo': 'SKU-WIN-002', 'nombre': 'Bach Stradivarius', 'categoria': 'Vientos', 'marca': 'Fender', 'precio': 850000, 'stock': 3},
-        ]
-
-        for prod_data in productos_data:
-            categoria = next((c for c in categorias if c.nombre == prod_data['categoria']), None)
-            marca = next((m for m in marcas if m.nombre == prod_data['marca']), None)
-            proveedor = random.choice(proveedores)
-            ubicacion = random.choice(ubicaciones)
-
-            if categoria and marca:
-                Producto.objects.get_or_create(
-                    codigo=prod_data['codigo'],
-                    defaults={
-                        'nombre': prod_data['nombre'],
-                        'categoria': categoria,
-                        'marca': marca,
-                        'proveedor_principal': proveedor,
-                        'ubicacion': ubicacion,
-                        'stock_actual': prod_data['stock'],
-                        'stock_minimo': random.randint(3, 8),
-                        'precio_unitario': prod_data['precio']
-                    }
+        # Productos (generados dinámicamente según cantidad)
+        with transaction.atomic():
+            productos_a_crear = []
+            productos_existentes = set(Producto.objects.values_list('codigo', flat=True))
+            
+            for i in range(cantidad):
+                codigo = f'SKU-{i+1:06d}'
+                if codigo in productos_existentes:
+                    continue
+                
+                categoria = random.choice(categorias)
+                marca = random.choice(marcas)
+                proveedor = random.choice(proveedores)
+                ubicacion = random.choice(ubicaciones)
+                
+                productos_a_crear.append(
+                    Producto(
+                        codigo=codigo,
+                        nombre=fake.sentence(nb_words=4).rstrip('.').capitalize(),
+                        categoria=categoria,
+                        marca=marca,
+                        proveedor_principal=proveedor,
+                        ubicacion=ubicacion,
+                        stock_actual=random.randint(0, 100),
+                        stock_minimo=random.randint(3, 10),
+                        precio_unitario=random.randint(50000, 1000000)
+                    )
                 )
-
+            
+            productos_creados = Producto.objects.bulk_create(productos_a_crear, batch_size=5000)
+        
         productos = list(Producto.objects.all())
-        self.stdout.write(f'Productos creados: {len(productos)}')
+        self.stdout.write(f'Productos creados: {len(productos_creados)}')
 
         # Sucursales de Destino
         sucursales_data = [
@@ -185,56 +184,85 @@ class Command(BaseCommand):
         sucursales = list(SucursalDestino.objects.all())
         self.stdout.write(f'Sucursales creadas: {len(sucursales)}')
 
-        # Órdenes de Despacho (con detalles)
-        estados = ['PENDIENTE', 'DESPACHADO', 'ENTREGADO', 'CANCELADO']
-        for i in range(10):
-            numero_guia = f'GUIA-2026-{i+1:04d}'
-            sucursal = random.choice(sucursales)
-            estado = random.choice(estados)
-
-            orden, created = OrdenDespacho.objects.get_or_create(
-                numero_guia=numero_guia,
-                defaults={
-                    'sucursal_destino': sucursal,
-                    'estado': estado
-                }
-            )
-
-            if created:
-                # Agregar 2-5 detalles por orden
+        # Órdenes de Despacho (con detalles) - escalado con cantidad
+        with transaction.atomic():
+            estados = ['PENDIENTE', 'DESPACHADO', 'ENTREGADO', 'CANCELADO']
+            cantidad_ordenes = max(10, cantidad // 10)
+            
+            ordenes_a_crear = []
+            detalles_a_crear = []
+            guias_existentes = set(OrdenDespacho.objects.values_list('numero_guia', flat=True))
+            
+            for i in range(cantidad_ordenes):
+                numero_guia = f'GUIA-2026-{i+1:06d}'
+                if numero_guia in guias_existentes:
+                    continue
+                
+                sucursal = random.choice(sucursales)
+                estado = random.choice(estados)
+                
+                orden = OrdenDespacho(
+                    numero_guia=numero_guia,
+                    sucursal_destino=sucursal,
+                    estado=estado
+                )
+                ordenes_a_crear.append(orden)
+            
+            ordenes_creadas = OrdenDespacho.objects.bulk_create(ordenes_a_crear, batch_size=5000)
+            
+            # Crear detalles para cada orden
+            for orden in ordenes_creadas:
                 num_detalles = random.randint(2, 5)
                 productos_seleccionados = random.sample(productos, min(num_detalles, len(productos)))
                 
                 for producto in productos_seleccionados:
                     cantidad = random.randint(1, 5)
-                    DetalleDespacho.objects.create(
-                        orden=orden,
-                        producto=producto,
-                        cantidad_solicitada=cantidad
+                    detalles_a_crear.append(
+                        DetalleDespacho(
+                            orden=orden,
+                            producto=producto,
+                            cantidad_solicitada=cantidad
+                        )
                     )
-
+            
+            detalles_creados = DetalleDespacho.objects.bulk_create(detalles_a_crear, batch_size=5000)
+        
         ordenes = list(OrdenDespacho.objects.all())
         detalles = list(DetalleDespacho.objects.all())
-        self.stdout.write(f'Órdenes de despacho creadas: {len(ordenes)}')
-        self.stdout.write(f'Detalles de despacho creados: {len(detalles)}')
+        self.stdout.write(f'Órdenes de despacho creadas: {len(ordenes_creadas)}')
+        self.stdout.write(f'Detalles de despacho creados: {len(detalles_creados)}')
 
-        # Auditorías de Stock
-        tipos_ajuste = ['INVENTARIO_FISICO', 'MERMA', 'DEVOLUCION']
-        for producto in random.sample(productos, min(15, len(productos))):
-            num_auditorias = random.randint(1, 3)
-            for _ in range(num_auditorias):
-                tipo = random.choice(tipos_ajuste)
-                cantidad = random.choice([-5, -3, -2, -1, 1, 2, 3, 5])
-                observacion = fake.sentence() if random.random() > 0.3 else ''
-                
-                AuditoriaStock.objects.create(
-                    producto=producto,
-                    tipo_ajuste=tipo,
-                    cantidad_afectada=cantidad,
-                    observacion=observacion
-                )
-
+        # Auditorías de Stock - escalado con cantidad
+        with transaction.atomic():
+            tipos_ajuste = ['INVENTARIO_FISICO', 'MERMA', 'DEVOLUCION']
+            cantidad_auditorias = max(15, cantidad // 5)
+            
+            auditorias_a_crear = []
+            productos_muestra = random.sample(productos, min(cantidad_auditorias, len(productos)))
+            
+            for producto in productos_muestra:
+                num_auditorias = random.randint(1, 3)
+                for _ in range(num_auditorias):
+                    tipo = random.choice(tipos_ajuste)
+                    cantidad = random.choice([-5, -3, -2, -1, 1, 2, 3, 5])
+                    observacion = fake.sentence() if random.random() > 0.3 else ''
+                    
+                    auditorias_a_crear.append(
+                        AuditoriaStock(
+                            producto=producto,
+                            tipo_ajuste=tipo,
+                            cantidad_afectada=cantidad,
+                            observacion=observacion
+                        )
+                    )
+            
+            auditorias_creadas = AuditoriaStock.objects.bulk_create(auditorias_a_crear, batch_size=5000)
+        
         auditorias = list(AuditoriaStock.objects.all())
-        self.stdout.write(f'Auditorías de stock creadas: {len(auditorias)}')
+        self.stdout.write(f'Auditorías de stock creadas: {len(auditorias_creadas)}')
 
-        self.stdout.write(self.style.SUCCESS('Base de datos poblada exitosamente.'))
+        # Métricas finales
+        tiempo_transcurrido = time.time() - tiempo_inicio
+        self.stdout.write(self.style.SUCCESS(f'Base de datos poblada exitosamente.'))
+        self.stdout.write(f'Tiempo total: {tiempo_transcurrido:.2f} segundos')
+        self.stdout.write(f'Total de registros generados: {len(categorias) + len(marcas) + len(proveedores) + len(zonas) + len(ubicaciones) + len(productos) + len(sucursales) + len(ordenes) + len(detalles) + len(auditorias)}')
