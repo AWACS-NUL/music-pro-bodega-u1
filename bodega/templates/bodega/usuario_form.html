@@ -1,0 +1,47 @@
+{% extends 'bodega/base.html' %}
+
+{% block title %}{{ titulo }} | Music Pro Bodega{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">{{ titulo }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% for campo in form %}
+                    <div class="mb-3 {% if campo.field.widget.input_type == 'checkbox' %}form-check{% endif %}">
+                        {% if campo.field.widget.input_type != 'checkbox' %}
+                            <label for="id_{{ campo.name }}" class="form-label">{{ campo.label }}</label>
+                        {% endif %}
+                        {{ campo }}
+                        {% if campo.field.widget.input_type == 'checkbox' %}
+                            <label for="id_{{ campo.name }}" class="form-check-label ms-1">{{ campo.label }}</label>
+                        {% endif %}
+                        {% if campo.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in campo.errors %}{{ error }}<br>{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>{{ accion }}
+                        </button>
+                        <a href="{% url 'bodega:usuario_lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

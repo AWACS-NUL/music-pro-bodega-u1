@@ -3,14 +3,17 @@ from pathlib import Path
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login, logout
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.models import User
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.forms import inlineformset_factory
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
 from .models import Producto, Categoria, OrdenDespacho, DetalleDespacho
-from .forms import ProductoForm, OrdenDespachoForm, DetalleDespachoForm
+from .forms import ProductoForm, OrdenDespachoForm, DetalleDespachoForm, UsuarioRegistroForm, UsuarioEdicionForm
+
+staff_required = user_passes_test(lambda u: u.is_staff, login_url='bodega:producto_lista')
 
 DATA_FILE = Path(__file__).resolve().parent / 'data' / 'productos.json'
 
@@ -283,3 +286,105 @@ def despacho_detalle(request, pk):
         pk=pk
     )
     return render(request, 'bodega/despacho_detalle.html', {'orden': orden})
+
+# ==================== GESTIÓN DE USUARIOS ====================
+
+@staff_required
+def usuario_lista(request):
+    usuarios = User.objects.all().order_by('id')
+
+    busqueda = request.GET.get('q', '').strip()
+    if busqueda:
+        usuarios = usuarios.filter(
+            Q(username__icontains=busqueda)
+            | Q(first_name__icontains=busqueda)
+            | Q(last_name__icontains=busqueda)
+            | Q(email__icontains=busqueda)
+        )
+
+    return render(request, 'bodega/usuario_lista.html', {
+        'usuarios': usuarios,
+        'busqueda': busqueda,
+    })
+
+
+@staff_required
+def usuario_crear(request):
+    if request.method == 'POST':
+        form = UsuarioRegistroForm(request.POST)
+        if form.is_valid():
+            usuario = form.save()
+            messages.success(request, f'Usuario "{usuario.username}" creado con contraseña hasheada de forma segura.')
+            return redirect('bodega:usuario_lista')
+        messages.error(request, 'Corrija los errores del formulario para crear el usuario.')
+    else:
+        form = UsuarioRegistroForm()
+
+    return render(request, 'bodega/usuario_form.html', {
+        'form': form,
+        'titulo': 'Crear Usuario',
+        'accion': 'Crear Usuario',
+        'url_volver': 'bodega:usuario_lista',
+    })
+
+
+@staff_required
+def usuario_editar(request, pk):
+    usuario = get_object_or_404(User, pk=pk)
+    if request.method == 'POST':
+        form = UsuarioEdicionForm(request.POST, instance=usuario)
+        if form.is_valid():
+            usuario = form.save()
+            messages.success(request, f'Usuario "{usuario.username}" actualizado con éxito.')
+            return redirect('bodega:usuario_lista')
+        messages.error(request, 'Corrija los errores del formulario para actualizar el usuario.')
+    else:
+        form = UsuarioEdicionForm(instance=usuario)
+
+    return render(request, 'bodega/usuario_form.html', {
+        'form': form,
+        'titulo': f'Editar Usuario: {usuario.username}',
+        'accion': 'Guardar Cambios',
+        'url_volver': 'bodega:usuario_lista',
+        'usuario': usuario,
+    })
+
+
+@staff_required
+def usuario_toggle_activo(request, pk):
+    if request.method != 'POST':
+        return redirect('bodega:usuario_lista')
+
+    usuario = get_object_or_404(User, pk=pk)
+
+    if usuario == request.user and usuario.is_active:
+        messages.error(request, 'No puedes desactivar tu propia cuenta de administrador.')
+        return redirect('bodega:usuario_lista')
+
+    usuario.is_active = not usuario.is_active
+    usuario.save(update_fields=['is_active'])
+
+    estado = 'activado' if usuario.is_active else 'desactivado'
+    messages.success(request, f'Usuario "{usuario.username}" {estado} correctamente.')
+    return redirect('bodega:usuario_lista')
+
+
+@staff_required
+def usuario_eliminar(request, pk):
+    if request.method != 'POST':
+        return redirect('bodega:usuario_lista')
+
+    usuario = get_object_or_404(User, pk=pk)
+
+    if usuario == request.user:
+        messages.error(request, 'No puedes eliminar tu propia cuenta.')
+        return redirect('bodega:usuario_lista')
+
+    if request.POST.get('confirmar') != 'SI':
+        messages.error(request, 'Eliminación no confirmada. Acción cancelada.')
+        return redirect('bodega:usuario_lista')
+
+    nombre = usuario.username
+    usuario.delete()
+    messages.success(request, f'Usuario "{nombre}" eliminado permanentemente del sistema.')
+    return redirect('bodega:usuario_lista')
