@@ -115,6 +115,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
+LOGIN_URL = 'bodega:login'
+LOGIN_REDIRECT_URL = 'bodega:producto_lista'
+LOGOUT_REDIRECT_URL = 'bodega:login'
+
 STATIC_URL = 'static/'
 
 

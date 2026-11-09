@@ -6,6 +6,8 @@ app_name = 'bodega'
 urlpatterns = [
     path('', views.panel_inventario, name='panel'),
     path('movimiento/', views.movimiento_mercaderia, name='movimiento'),
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
 
     # CRUD Productos
     path('productos/', views.producto_lista, name='producto_lista'),

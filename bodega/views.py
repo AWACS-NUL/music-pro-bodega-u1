@@ -2,6 +2,10 @@ import json
 from pathlib import Path
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.forms import inlineformset_factory
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
@@ -105,8 +109,42 @@ def movimiento_mercaderia(request):
     return render(request, 'bodega/movimiento.html', contexto)
 
 
+# ==================== AUTENTICACIÓN ====================
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('bodega:producto_lista')
+
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            usuario = form.get_user()
+            login(request, usuario)
+            messages.success(request, f'Bienvenido, {usuario.username}. Sesión iniciada correctamente.')
+            siguiente = request.POST.get('next') or request.GET.get('next')
+            if siguiente and url_has_allowed_host_and_scheme(
+                siguiente, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+            ):
+                return redirect(siguiente)
+            return redirect('bodega:producto_lista')
+    else:
+        form = AuthenticationForm()
+
+    return render(request, 'bodega/login.html', {
+        'form': form,
+        'next': request.GET.get('next', ''),
+    })
+
+
+def logout_view(request):
+    logout(request)
+    messages.info(request, 'Sesión cerrada correctamente. Hasta pronto.')
+    return redirect('bodega:login')
+
+
 # ==================== CRUD PRODUCTOS ====================
 
+@login_required
 def producto_lista(request):
     productos = Producto.objects.select_related(
         'categoria', 'marca', 'proveedor_principal', 'ubicacion'
@@ -134,6 +172,7 @@ def producto_lista(request):
     return render(request, 'bodega/producto_lista.html', contexto)
 
 
+@login_required
 def producto_crear(request):
     if request.method == 'POST':
         form = ProductoForm(request.POST)
@@ -152,6 +191,7 @@ def producto_crear(request):
     })
 
 
+@login_required
 def producto_editar(request, pk):
     producto = get_object_or_404(Producto, pk=pk)
     if request.method == 'POST':
@@ -172,6 +212,7 @@ def producto_editar(request, pk):
     })
 
 
+@login_required
 def producto_eliminar(request, pk):
     producto = get_object_or_404(Producto, pk=pk)
 
@@ -196,6 +237,7 @@ DetalleDespachoFormSet = inlineformset_factory(
 )
 
 
+@login_required
 def despacho_lista(request):
     despachos = OrdenDespacho.objects.select_related('sucursal_destino').annotate(
         total_items=Count('detalles')
@@ -206,6 +248,7 @@ def despacho_lista(request):
     return render(request, 'bodega/despacho_lista.html', {'despachos': pagina})
 
 
+@login_required
 def despacho_crear(request):
     if request.method == 'POST':
         form = OrdenDespachoForm(request.POST)
@@ -231,6 +274,7 @@ def despacho_crear(request):
     })
 
 
+@login_required
 def despacho_detalle(request, pk):
     orden = get_object_or_404(
         OrdenDespacho.objects.select_related('sucursal_destino').prefetch_related(
