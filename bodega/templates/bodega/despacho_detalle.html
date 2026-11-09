@@ -1,0 +1,76 @@
+{% extends 'bodega/base.html' %}
+
+{% block title %}Guía {{ orden.numero_guia }} | Music Pro Bodega{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0"><i class="bi bi-truck me-2"></i>Guía de Despacho</h3>
+    <a href="{% url 'bodega:despacho_lista' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Volver al listado
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-dark text-white"><strong>Datos de la Orden</strong></div>
+            <div class="card-body">
+                <p class="mb-2"><strong>N° Guía:</strong> <code>{{ orden.numero_guia }}</code></p>
+                <p class="mb-2"><strong>Sucursal:</strong> {{ orden.sucursal_destino.nombre }}</p>
+                <p class="mb-2"><strong>Ciudad:</strong> {{ orden.sucursal_destino.ciudad }}</p>
+                <p class="mb-2"><strong>Dirección:</strong> {{ orden.sucursal_destino.direccion }}</p>
+                <p class="mb-2"><strong>Estado:</strong>
+                    {% if orden.estado == 'PENDIENTE' %}
+                        <span class="badge bg-warning text-dark">En Preparación</span>
+                    {% elif orden.estado == 'DESPACHADO' %}
+                        <span class="badge bg-info text-dark">En Tránsito</span>
+                    {% elif orden.estado == 'ENTREGADO' %}
+                        <span class="badge bg-success">Recibido</span>
+                    {% else %}
+                        <span class="badge bg-danger">Anulado</span>
+                    {% endif %}
+                </p>
+                <p class="mb-0"><strong>Fecha Creación:</strong> {{ orden.fecha_creacion|date:"d-m-Y H:i" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white"><strong>Productos Despachados</strong></div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Código</th>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th class="text-center">Cantidad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detalle in orden.detalles.all %}
+                        <tr>
+                            <td><code>{{ detalle.producto.codigo }}</code></td>
+                            <td>{{ detalle.producto.nombre }}</td>
+                            <td>{{ detalle.producto.categoria.nombre }}</td>
+                            <td class="text-center"><span class="badge bg-primary">{{ detalle.cantidad_solicitada }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">La guía no tiene líneas de detalle.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td colspan="3" class="text-end">Total unidades:</td>
+                            <td class="text-center">{{ orden.detalles.all|length }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

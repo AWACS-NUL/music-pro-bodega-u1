@@ -1,0 +1,78 @@
+{% extends 'bodega/base.html' %}
+
+{% block title %}Órdenes de Despacho | Music Pro Bodega{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0"><i class="bi bi-truck me-2"></i>Órdenes de Despacho</h3>
+    <a href="{% url 'bodega:despacho_crear' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Nueva Guía
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Guía</th>
+                    <th>Sucursal Destino</th>
+                    <th class="text-center">Ítems</th>
+                    <th>Estado</th>
+                    <th>Fecha Creación</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for despacho in despachos %}
+                <tr>
+                    <td><code>{{ despacho.numero_guia }}</code></td>
+                    <td>{{ despacho.sucursal_destino.nombre }}<br>
+                        <small class="text-muted">{{ despacho.sucursal_destino.ciudad }}</small>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-secondary">{{ despacho.total_items }}</span>
+                    </td>
+                    <td>
+                        {% if despacho.estado == 'PENDIENTE' %}
+                            <span class="badge bg-warning text-dark">En Preparación</span>
+                        {% elif despacho.estado == 'DESPACHADO' %}
+                            <span class="badge bg-info text-dark">En Tránsito</span>
+                        {% elif despacho.estado == 'ENTREGADO' %}
+                            <span class="badge bg-success">Recibido</span>
+                        {% else %}
+                            <span class="badge bg-danger">Anulado</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ despacho.fecha_creacion|date:"d-m-Y H:i" }}</td>
+                    <td class="text-center">
+                        <a href="{% url 'bodega:despacho_detalle' despacho.pk %}" class="btn btn-sm btn-outline-primary" title="Ver detalle">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">No hay órdenes de despacho registradas.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if despachos.paginator.num_pages > 1 %}
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        <small class="text-muted">Página {{ despachos.number }} de {{ despachos.paginator.num_pages }} ({{ despachos.paginator.count }} registros)</small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if despachos.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ despachos.previous_page_number }}">Anterior</a></li>
+                {% endif %}
+                {% if despachos.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ despachos.next_page_number }}">Siguiente</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

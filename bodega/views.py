@@ -1,7 +1,12 @@
 import json
 from pathlib import Path
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.forms import inlineformset_factory
+from django.db.models import Q, Count
+from django.core.paginator import Paginator
+from .models import Producto, Categoria, OrdenDespacho, DetalleDespacho
+from .forms import ProductoForm, OrdenDespachoForm, DetalleDespachoForm
 
 DATA_FILE = Path(__file__).resolve().parent / 'data' / 'productos.json'
 
@@ -98,3 +103,139 @@ def movimiento_mercaderia(request):
         'sucursales': sucursales,
     }
     return render(request, 'bodega/movimiento.html', contexto)
+
+
+# ==================== CRUD PRODUCTOS ====================
+
+def producto_lista(request):
+    productos = Producto.objects.select_related(
+        'categoria', 'marca', 'proveedor_principal', 'ubicacion'
+    ).order_by('codigo').all()
+
+    busqueda = request.GET.get('q', '').strip()
+    categoria_id = request.GET.get('categoria', '').strip()
+
+    if busqueda:
+        productos = productos.filter(
+            Q(nombre__icontains=busqueda) | Q(codigo__icontains=busqueda)
+        )
+    if categoria_id:
+        productos = productos.filter(categoria_id=categoria_id)
+
+    paginator = Paginator(productos, 25)
+    pagina = paginator.get_page(request.GET.get('page'))
+
+    contexto = {
+        'productos': pagina,
+        'categorias': Categoria.objects.all().order_by('nombre'),
+        'busqueda': busqueda,
+        'categoria_filtro': categoria_id,
+    }
+    return render(request, 'bodega/producto_lista.html', contexto)
+
+
+def producto_crear(request):
+    if request.method == 'POST':
+        form = ProductoForm(request.POST)
+        if form.is_valid():
+            producto = form.save()
+            messages.success(request, f'Producto "{producto.nombre}" creado con éxito.')
+            return redirect('bodega:producto_lista')
+        messages.error(request, 'Corrija los errores del formulario para guardar el producto.')
+    else:
+        form = ProductoForm()
+
+    return render(request, 'bodega/producto_form.html', {
+        'form': form,
+        'titulo': 'Crear Producto',
+        'accion': 'Crear',
+    })
+
+
+def producto_editar(request, pk):
+    producto = get_object_or_404(Producto, pk=pk)
+    if request.method == 'POST':
+        form = ProductoForm(request.POST, instance=producto)
+        if form.is_valid():
+            producto = form.save()
+            messages.success(request, f'Producto "{producto.nombre}" actualizado con éxito.')
+            return redirect('bodega:producto_lista')
+        messages.error(request, 'Corrija los errores del formulario para actualizar el producto.')
+    else:
+        form = ProductoForm(instance=producto)
+
+    return render(request, 'bodega/producto_form.html', {
+        'form': form,
+        'titulo': 'Editar Producto',
+        'accion': 'Guardar Cambios',
+        'producto': producto,
+    })
+
+
+def producto_eliminar(request, pk):
+    producto = get_object_or_404(Producto, pk=pk)
+
+    if request.method == 'POST':
+        nombre = producto.nombre
+        producto.delete()
+        messages.success(request, f'Producto "{nombre}" eliminado permanentemente.')
+        return redirect('bodega:producto_lista')
+
+    return render(request, 'bodega/producto_confirmar_eliminar.html', {
+        'producto': producto,
+    })
+
+
+# ==================== CRUD DESPACHOS ====================
+
+DetalleDespachoFormSet = inlineformset_factory(
+    OrdenDespacho, DetalleDespacho,
+    form=DetalleDespachoForm,
+    extra=1,
+    can_delete=True,
+)
+
+
+def despacho_lista(request):
+    despachos = OrdenDespacho.objects.select_related('sucursal_destino').annotate(
+        total_items=Count('detalles')
+    ).order_by('-fecha_creacion')
+
+    paginator = Paginator(despachos, 25)
+    pagina = paginator.get_page(request.GET.get('page'))
+    return render(request, 'bodega/despacho_lista.html', {'despachos': pagina})
+
+
+def despacho_crear(request):
+    if request.method == 'POST':
+        form = OrdenDespachoForm(request.POST)
+        formset = DetalleDespachoFormSet(request.POST)
+        if form.is_valid() and formset.is_valid():
+            orden = form.save()
+            detalles = formset.save(commit=False)
+            for detalle in detalles:
+                detalle.orden = orden
+                detalle.save()
+            formset.save_m2m()
+            messages.success(request, f'Orden de despacho "{orden.numero_guia}" registrada con sus líneas de detalle.')
+            return redirect('bodega:despacho_lista')
+        messages.error(request, 'Revise los datos de la guía y las líneas de detalle antes de guardar.')
+    else:
+        form = OrdenDespachoForm()
+        formset = DetalleDespachoFormSet(queryset=DetalleDespacho.objects.none())
+
+    return render(request, 'bodega/despacho_form.html', {
+        'form': form,
+        'formset': formset,
+        'titulo': 'Crear Orden de Despacho',
+    })
+
+
+def despacho_detalle(request, pk):
+    orden = get_object_or_404(
+        OrdenDespacho.objects.select_related('sucursal_destino').prefetch_related(
+            'detalles__producto__categoria'
+        ),
+        pk=pk
+    )
+    return render(request, 'bodega/despacho_detalle.html', {'orden': orden})
